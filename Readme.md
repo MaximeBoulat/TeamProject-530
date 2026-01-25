@@ -24,3 +24,6 @@ This project develops a complete IoT system for monitoring and predicting urban 
 Add a build/datasets folder at the root of the project and place the acorn_details.csv, daily_dataset.csv and information_households.csv from [here](https://www.kaggle.com/datasets/jeanmidev/smart-meters-in-london/) inside. 
 
 Then you can run the notebooks and the project straight from VSCode.
+
+Testing Testing
+
