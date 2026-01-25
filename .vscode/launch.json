@@ -3,7 +3,7 @@
     "configurations": [
         
         {
-            "name": "USD test program",
+            "name": "AAI-530 Team project",
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}/src/main.py",
