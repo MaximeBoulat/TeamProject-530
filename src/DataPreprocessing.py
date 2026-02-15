@@ -85,6 +85,9 @@ class DataPreprocessing:
             how="left"
         )
 
+        # drop NAs
+        daily_with_weather = daily_with_weather.dropna()
+
         # Merge holidays
         holidays = holidays.rename(columns={
             "Bank holidays": "day",

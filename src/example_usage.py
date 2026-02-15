@@ -123,8 +123,9 @@ def example_lstm(df):
     
     # Initialize LSTM model
     lstm_model = LSTMEnergyModel(
-        sequence_length=24,  # Use 24 days of history
-        lstm_units=50,
+        sequence_length=48,  # Use 48 days of history
+        lstm_units=75,
+        num_layers=3,
         dropout_rate=0.2,
         random_seed=42
     )
@@ -138,7 +139,7 @@ def example_lstm(df):
         df_clean,
         feature_cols=available_features,
         target_col=target_col,
-        train_split=0.8,
+        train_split=0.7,
         use_exogenous=USE_EXOGENOUS
     )
     

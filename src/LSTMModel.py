@@ -25,6 +25,7 @@ class LSTMEnergyModel:
     """
     
     def __init__(self, sequence_length: int = 24, lstm_units: int = 50, 
+                 num_layers: int = 2,
                  dropout_rate: float = 0.2, random_seed: int = 42):
         """
         Initialize LSTM model.
@@ -32,11 +33,13 @@ class LSTMEnergyModel:
         Args:
             sequence_length: Number of time steps to look back
             lstm_units: Number of LSTM units in each layer
+            num_layers: Number of LSTM layers
             dropout_rate: Dropout rate for regularization
             random_seed: Random seed for reproducibility
         """
         self.sequence_length = sequence_length
         self.lstm_units = lstm_units
+        self.num_layers = num_layers
         self.dropout_rate = dropout_rate
         self.random_seed = random_seed
         
@@ -46,6 +49,7 @@ class LSTMEnergyModel:
         
         self.model = None
         self.scaler = None
+        self.feature_scaler = None
         self.history = None
         
     def create_sequences(self, data, target, sequence_length):
@@ -97,10 +101,16 @@ class LSTMEnergyModel:
             features = target
             print(f"\nMode: Univariate (autoregressive - only using target variable)")
         
-        # Normalize features
+        # Scale target (scaler fitted on target only — used for inverse_transform)
         self.scaler = MinMaxScaler()
-        features_scaled = self.scaler.fit_transform(features)
         target_scaled = self.scaler.fit_transform(target)
+
+        # Scale features
+        if use_exogenous:
+            self.feature_scaler = MinMaxScaler()
+            features_scaled = self.feature_scaler.fit_transform(features)
+        else:
+            features_scaled = target_scaled
         
         # Create sequences
         X, y = self.create_sequences(features_scaled, target_scaled, self.sequence_length)
@@ -128,18 +138,22 @@ class LSTMEnergyModel:
             nb_out: Number of output values (default 1 for regression)
         """
         self.model = Sequential()
-        
-        # First LSTM layer with return sequences
-        self.model.add(LSTM(
-            units=self.lstm_units,
-            return_sequences=True,
-            input_shape=(self.sequence_length, nb_features)
-        ))
-        self.model.add(Dropout(self.dropout_rate))
-        
-        # Second LSTM layer
-        self.model.add(LSTM(units=self.lstm_units))
-        self.model.add(Dropout(self.dropout_rate))
+
+        for i in range(self.num_layers):
+            if i == 0:
+            
+                # First LSTM layer with return sequences
+                self.model.add(LSTM(
+                    units=self.lstm_units,
+                    return_sequences=True,
+                    input_shape=(self.sequence_length, nb_features)
+                ))
+            else:
+                # Subsequent LSTM layers
+                self.model.add(LSTM(units=self.lstm_units, return_sequences=(i < self.num_layers - 1)
+                ))
+
+            self.model.add(Dropout(self.dropout_rate))
         
         # Output layer (linear activation for regression)
         self.model.add(Dense(units=nb_out, activation='linear'))
