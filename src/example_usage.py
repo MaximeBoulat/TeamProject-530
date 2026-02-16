@@ -1,5 +1,5 @@
 """
-Example usage of TraditionalML and LSTMModel classes.
+Example usage of TraditionalML, LSTMModel, and NeuralNetwork classes.
 """
 
 from pathlib import Path
@@ -9,9 +9,10 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 
-from DataPreprocessing import DataPreprocessing
+from DataPreprocessing import DataPreprocessing, ModelType
 from TraditionalML import train_all_models, RandomForestModel, XGBoostModel
 from LSTMModel import LSTMEnergyModel
+from NeuralNetwork import NeuralNetwork
 
 
 def example_traditional_ml(df):
@@ -168,14 +169,62 @@ def example_lstm(df):
     print("="*80)
 
 
+def example_neural_network(df):
+    """Example: Train Neural Network on ACORN-segmented data."""
+
+    print("\n" + "="*80)
+    print("NEURAL NETWORK MODEL")
+    print("="*80)
+
+    feature_cols = [
+        "Acorn_grouped", "month", "day_of_week", "season",
+        "is_holiday", "temperatureHigh", "temperatureLow",
+        "humidity", "windSpeed", "cloudCover", "pressure",
+        "num_active_households"
+    ]
+
+    target_col = "consumption_level"
+
+    # Initialize and run NN pipeline
+    nn = NeuralNetwork(hidden_layer_sizes=(64, 32), random_seed=42)
+
+    X_train, X_test, y_train, y_test = nn.prepare_data(
+        df, feature_cols, target_col
+    )
+
+    # Train with test set as validation
+    nn.train(
+        X_train, y_train,
+        X_val=X_test, y_val=y_test,
+        epochs=150,
+        batch_size=64,
+        model_path=str(Path(MODELS_ROOT) / 'nn_energy_model.h5')
+    )
+
+    # Evaluate
+    metrics, y_pred = nn.evaluate(X_test, y_test)
+
+    # Plot results
+    nn.plot_history(save_path=str(Path(PLOTS_ROOT) / 'nn_training_history.png'))
+    nn.plot_predictions(y_test, y_pred, save_path=str(Path(PLOTS_ROOT) / 'nn_predictions.png'))
+
+    print("\n" + "="*80)
+    print("Neural Network Model complete")
+    print("="*80)
+
+
 def main():
     """Run examples."""
-    
-    # Load preprocessed data once
+
     print("Loading preprocessed data...")
     preprocessor = DataPreprocessing()
-    df = preprocessor.preprocess_data()
-    
+
+    # LSTM uses global daily aggregation
+    df_lstm = preprocessor.preprocess_data(model_type=ModelType.LSTM)
+
+    # Neural Network uses ACORN-segmented aggregation
+    df_nn = preprocessor.preprocess_data(model_type=ModelType.NEURAL_NETWORK)
+
     # Example 1: Traditional ML models
     try:
         example_traditional_ml()
@@ -183,12 +232,20 @@ def main():
         print(f"\nError in Traditional ML example: {e}")
         import traceback
         traceback.print_exc()
-    
+
     # Example 2: LSTM model
     try:
-        example_lstm(df)
+        example_lstm(df_lstm)
     except Exception as e:
         print(f"\nError in LSTM example: {e}")
+        import traceback
+        traceback.print_exc()
+
+    # Example 3: Neural Network model
+    try:
+        example_neural_network(df_nn)
+    except Exception as e:
+        print(f"\nError in Neural Network example: {e}")
         import traceback
         traceback.print_exc()
 
