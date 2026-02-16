@@ -1,3 +1,5 @@
+from xml.parsers.expat import model
+from matplotlib import units
 import numpy as np
 import pandas as pd
 from pathlib import Path
@@ -49,7 +51,6 @@ class LSTMEnergyModel:
         
         self.model = None
         self.scaler = None
-        self.feature_scaler = None
         self.history = None
         
     def create_sequences(self, data, target, sequence_length):
@@ -101,16 +102,10 @@ class LSTMEnergyModel:
             features = target
             print(f"\nMode: Univariate (autoregressive - only using target variable)")
         
-        # Scale target (scaler fitted on target only — used for inverse_transform)
+        # Normalize features
         self.scaler = MinMaxScaler()
+        features_scaled = self.scaler.fit_transform(features)
         target_scaled = self.scaler.fit_transform(target)
-
-        # Scale features
-        if use_exogenous:
-            self.feature_scaler = MinMaxScaler()
-            features_scaled = self.feature_scaler.fit_transform(features)
-        else:
-            features_scaled = target_scaled
         
         # Create sequences
         X, y = self.create_sequences(features_scaled, target_scaled, self.sequence_length)
@@ -141,18 +136,20 @@ class LSTMEnergyModel:
 
         for i in range(self.num_layers):
             if i == 0:
-            
-                # First LSTM layer with return sequences
+                
+        
+                # First layer - specify input shape
                 self.model.add(LSTM(
                     units=self.lstm_units,
-                    return_sequences=True,
-                    input_shape=(self.sequence_length, nb_features)
+                    input_shape=(self.sequence_length, nb_features),
+                    return_sequences=(i < self.num_layers - 1)  # True except for last layer
                 ))
             else:
-                # Subsequent LSTM layers
-                self.model.add(LSTM(units=self.lstm_units, return_sequences=(i < self.num_layers - 1)
+                # Subsequent layers
+                self.model.add(LSTM(
+                    units=self.lstm_units,
+                    return_sequences=(i < self.num_layers - 1)  # True except for last layer
                 ))
-
             self.model.add(Dropout(self.dropout_rate))
         
         # Output layer (linear activation for regression)
