@@ -7,15 +7,15 @@ from example_usage import example_traditional_ml, example_lstm, example_neural_n
 def main():
 
     data_preprocessor = DataPreprocessing()
-    df = data_preprocessor.preprocess_data(model_type=ModelType.NEURAL_NETWORK)
+    df = data_preprocessor.preprocess_data(model_type=ModelType.LSTM)
 
     print(df.head())
 
     # example_traditional_ml(df)
 
-    # example_lstm(df)
+    example_lstm(df)
 
-    example_neural_network(df)
+    # example_neural_network(df)
     
 
     input("Press Enter to exit...")

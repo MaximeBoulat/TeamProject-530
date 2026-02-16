@@ -1,5 +1,3 @@
-from xml.parsers.expat import model
-from matplotlib import units
 import numpy as np
 import pandas as pd
 from pathlib import Path
@@ -26,22 +24,24 @@ class LSTMEnergyModel:
     This model uses sequential time series data to predict future energy consumption.
     """
     
-    def __init__(self, sequence_length: int = 24, lstm_units: int = 50, 
-                 num_layers: int = 2,
+    def __init__(self, sequence_length: int = 24, lstm_units: int = 50,
+                 num_layers: int = 2, forecast_horizon: int = 1,
                  dropout_rate: float = 0.2, random_seed: int = 42):
         """
         Initialize LSTM model.
-        
+
         Args:
             sequence_length: Number of time steps to look back
             lstm_units: Number of LSTM units in each layer
             num_layers: Number of LSTM layers
+            forecast_horizon: Number of days ahead to predict (1 = next day, 3 = 3 days ahead)
             dropout_rate: Dropout rate for regularization
             random_seed: Random seed for reproducibility
         """
         self.sequence_length = sequence_length
         self.lstm_units = lstm_units
         self.num_layers = num_layers
+        self.forecast_horizon = forecast_horizon
         self.dropout_rate = dropout_rate
         self.random_seed = random_seed
         
@@ -56,22 +56,23 @@ class LSTMEnergyModel:
     def create_sequences(self, data, target, sequence_length):
         """
         Create sequences for LSTM training.
-        
+
         Args:
             data: Feature data (numpy array)
             target: Target data (numpy array)
             sequence_length: Number of time steps in each sequence
-            
+
         Returns:
             X: Sequences of features (samples, sequence_length, features)
             y: Corresponding targets
         """
         X, y = [], []
-        
-        for i in range(len(data) - sequence_length):
+        offset = self.forecast_horizon - 1
+
+        for i in range(len(data) - sequence_length - offset):
             X.append(data[i:i + sequence_length])
-            y.append(target[i + sequence_length])
-        
+            y.append(target[i + sequence_length + offset])
+
         return np.array(X), np.array(y)
     
     def prepare_data(self, df, feature_cols, target_col, train_split: float = 0.8, 
@@ -414,6 +415,56 @@ class LSTMEnergyModel:
             'ground_truth': y_val_actual
         }
     
+    def export_predictions(self, X_train, y_train, X_test, y_test,
+                           dates, export_path: str):
+        """
+        Export predictions aligned to dates as CSV for Tableau.
+
+        Args:
+            X_train: Training sequences
+            y_train: Training targets (scaled)
+            X_test: Test sequences
+            y_test: Test targets (scaled)
+            dates: Array of dates for the source data rows (before sequence creation)
+            export_path: Path for CSV output
+
+        Returns:
+            Export DataFrame
+        """
+        if self.model is None:
+            raise ValueError("Model not trained yet")
+
+        # Predict
+        y_pred_train = self.model.predict(X_train)
+        y_pred_test = self.model.predict(X_test)
+
+        # Inverse transform to actual values
+        y_train_actual = self.scaler.inverse_transform(y_train.reshape(-1, 1)).flatten()
+        y_pred_train_actual = self.scaler.inverse_transform(y_pred_train).flatten()
+        y_test_actual = self.scaler.inverse_transform(y_test.reshape(-1, 1)).flatten()
+        y_pred_test_actual = self.scaler.inverse_transform(y_pred_test).flatten()
+
+        # Align predictions to dates
+        # Prediction i targets data index: i + sequence_length + forecast_horizon - 1
+        target_offset = self.sequence_length + self.forecast_horizon - 1
+        n_train = len(y_train_actual)
+        n_test = len(y_test_actual)
+        aligned_dates = dates[target_offset : target_offset + n_train + n_test]
+
+        # Build export DataFrame
+        export_df = pd.DataFrame({
+            'day': aligned_dates,
+            'avg_kwh_per_household_per_day': np.concatenate([y_train_actual, y_test_actual]),
+            'predicted_avg_kwh': np.concatenate([y_pred_train_actual, y_pred_test_actual]),
+            'split': ['train'] * n_train + ['test'] * n_test
+        })
+
+        Path(export_path).parent.mkdir(parents=True, exist_ok=True)
+        export_df.to_csv(export_path, index=False)
+        print(f"Exported {len(export_df)} predictions to {export_path}")
+
+        return export_df
+
     def save_model(self, path: str = None):
         """Save trained model to file."""
         if self.model is None:

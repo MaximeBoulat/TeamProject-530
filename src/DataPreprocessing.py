@@ -105,8 +105,6 @@ class DataPreprocessing:
             weather_features, on="day", how="left"
         )
 
-        daily_with_weather = daily_with_weather.dropna()
-
         # Merge holidays
         daily_complete = daily_with_weather.merge(
             holidays, on="day", how="left"

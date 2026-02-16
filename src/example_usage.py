@@ -113,8 +113,10 @@ def example_lstm(df):
     
     target_col = 'avg_kwh_per_household_per_day'
     
-    # Drop missing values
-    df_clean = df[available_features + [target_col]].dropna()
+    # Drop missing values, keep dates aligned
+    clean_mask = df[available_features + [target_col]].notna().all(axis=1)
+    dates_clean = df.loc[clean_mask, 'day'].values
+    df_clean = df.loc[clean_mask, available_features + [target_col]]
     
     # Convert boolean to int
     if 'is_holiday' in df_clean.columns:
@@ -127,6 +129,7 @@ def example_lstm(df):
         sequence_length=48,  # Use 48 days of history
         lstm_units=75,
         num_layers=3,
+        forecast_horizon=3,
         dropout_rate=0.2,
         random_seed=42
     )
@@ -161,9 +164,16 @@ def example_lstm(df):
     lstm_model.plot_predictions(y_test_actual, y_pred, save_path=str(Path(PLOTS_ROOT) / 'lstm_predictions.png'))
     
     # Plot validation predictions vs ground truth
-    lstm_model.plot_validation_predictions(X_test, y_test, 
+    lstm_model.plot_validation_predictions(X_test, y_test,
                                           save_path=str(Path(PLOTS_ROOT) / 'lstm_validation_comparison.png'))
-    
+
+    # Export predictions for Tableau
+    lstm_model.export_predictions(
+        X_train, y_train, X_test, y_test,
+        dates=dates_clean,
+        export_path=str(Path(MODELS_ROOT).parent / 'results' / 'lstm_tableau_export.csv')
+    )
+
     print("\n" + "="*80)
     print("LSTM Model saved successfully")
     print("="*80)
