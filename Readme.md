@@ -1,29 +1,57 @@
-# AAI-530 Team Project
+# AAI-530 Team Project — Smart City Energy Consumption Analysis
 
-## Members
+## Team Members
 
 - Maxime Boulat
 - Wael Alhatal
 
-## Smart City Energy Consumption Monitoring and Prediction System
+## Overview
 
-This project develops a complete IoT system for monitoring and predicting urban electricity consumption patterns using the Smart Meters in London dataset from Kaggle. The dataset contains real-world electricity consumption data collected from over 5,000 residential smart meters across London between November 2011 and February 2014, representing a large-scale IoT deployment as part of the UK Power Networks Low Carbon London project.
+This project analyzes residential electricity consumption patterns using the [Smart Meters in London](https://www.kaggle.com/datasets/jeanmidev/smart-meters-in-london/) dataset from Kaggle. The dataset contains real-world energy consumption records collected from over 5,000 smart meters across London between November 2011 and February 2014, as part of the UK Power Networks Low Carbon London project.
 
-**Dataset**: The dataset includes millions of time-stamped energy consumption records with variables such as electricity usage measurements, household identifiers, temporal data, and aggregated daily statistics (mean, min, max, standard deviation, total usage). Supplemental weather and household classification data enable advanced consumption behavior modeling.
+The goal is to explore the factors driving household energy demand and build predictive models that can support smart city energy planning.
 
-**IoT Application**: The system tracks electricity usage trends, predicts future energy demand, and identifies consumption patterns including peak and off-peak periods. Machine learning models generate forecasts and actionable insights for data-driven decision making.
+## Dataset
 
-**Target Users**: Utility providers, city energy planners, sustainability teams, and policy makers who can leverage the system for load balancing, energy efficiency planning, and long-term infrastructure development.
+The dataset includes:
+- `daily_dataset.csv` — daily electricity consumption per household (kWh)
+- `information_households.csv` — household metadata including ACORN socio-demographic classification and tariff type
+- `acorn_details.csv` — ACORN group descriptions
+- Supplemental daily weather data joined during analysis
 
-**System Components**: The project includes a complete theoretical IoT system design addressing sensors, edge processing, networking protocols, data storage/processing infrastructure, and machine learning insight generation. Implementation features exploratory data analysis, data cleaning/processing pipelines, and at least two machine learning methods including one deep learning model and one time series prediction model.
+## Project Structure
 
-**Deliverables**: Results are communicated through an interactive Tableau Public dashboard providing status visualizations, historical summaries, and machine learning insights designed for practical smart city energy management applications. 
+```
+├── Notebooks/
+│   └── Smart_meters_in_London.ipynb   # Main analysis notebook
+├── build/
+│   ├── datasets/                      # Place Kaggle data files here (see setup)
+│   └── results/                       # Model prediction exports (generated on run)
+└── Readme.md
+```
 
-## Instructions
+## Notebook Contents
 
-Add a build/datasets folder at the root of the project and place the acorn_details.csv, daily_dataset.csv and information_households.csv from [here](https://www.kaggle.com/datasets/jeanmidev/smart-meters-in-london/) inside. 
+The main notebook walks through the full analysis pipeline:
 
-Then you can run the notebooks and the project straight from VSCode.
+1. **Data loading and cleaning** — date standardization, household ramp-up bias correction, normalization to per-household daily averages
+2. **Exploratory Data Analysis** — seasonality, weather impact, ACORN socio-demographic segmentation, tariff type comparison, holiday effects, and temperature × ACORN interaction analysis
+3. **Model 1: Neural Network** — feedforward classifier predicting seasonally adjusted consumption tiers (Low / Normal / High) per ACORN group, intended as a peak risk signal for grid operators
+4. **Model 2: LSTM** — stacked LSTM forecasting average daily household consumption 3 days ahead, intended as a grid planning tool
 
-Testing Testing
+## Setup
 
+1. Download the dataset from [Kaggle](https://www.kaggle.com/datasets/jeanmidev/smart-meters-in-london/)
+2. Create a `build/datasets/` folder at the root of the project
+3. Place `acorn_details.csv`, `daily_dataset.csv`, and `information_households.csv` inside it
+4. Open and run `Notebooks/Smart_meters_in_London.ipynb` in VSCode
+
+## Requirements
+
+The notebook was developed in Python 3 with the following main dependencies:
+
+- pandas
+- numpy
+- matplotlib / seaborn
+- scikit-learn
+- tensorflow / keras
